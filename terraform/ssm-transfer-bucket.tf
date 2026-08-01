@@ -4,6 +4,11 @@
 # enough - no versioning needed.
 
 resource "aws_s3_bucket" "ssm_transfer" {
+  #checkov:skip=CKV_AWS_21:Transient scratch space; objects expire after 1 day, so keeping deleted-object versions around works against the bucket's purpose.
+  #checkov:skip=CKV_AWS_144:Ephemeral SSM file-transfer data with a 1-day TTL doesn't need cross-region durability.
+  #checkov:skip=CKV2_AWS_62:No downstream consumer needs to react to object events in this internal scratch bucket.
+  #checkov:skip=CKV_AWS_18:Access logging isn't valuable for a bucket that only ever holds transient, non-sensitive transfer blobs expiring within a day.
+  #checkov:skip=CKV_AWS_145:Already encrypted at rest with SSE-S3 (AES256); customer-managed KMS adds key-management overhead with no real benefit for non-sensitive, short-lived data.
   bucket = "${var.project_name}-ssm-transfer-${data.aws_caller_identity.current.account_id}"
 }
 
@@ -34,6 +39,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "ssm_transfer" {
     status = "Enabled"
 
     filter {}
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1
+    }
 
     expiration {
       days = 1
