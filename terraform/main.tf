@@ -49,19 +49,38 @@ resource "aws_security_group" "cyberchef" {
   }
 
   egress {
-    description = "Allow all outbound traffic"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    description = "HTTP outbound (apt mirrors)"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "HTTPS outbound (apt, Docker Hub, SSM endpoints)"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
+# checkov:skip=CKV_AWS_126: Detailed (1-min) monitoring adds ~$2.10/mo per instance;
+# not worth it for this demo t3.micro. Default 5-min basic monitoring is sufficient.
 resource "aws_instance" "cyberchef" {
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = var.instance_type
   vpc_security_group_ids = [aws_security_group.cyberchef.id]
   iam_instance_profile   = aws_iam_instance_profile.cyberchef.name
+  ebs_optimized          = true
+
+  root_block_device {
+    encrypted = true
+  }
+
+  metadata_options {
+    http_tokens = "required"
+  }
 
   tags = {
     Name    = var.project_name
