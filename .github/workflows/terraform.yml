@@ -28,7 +28,7 @@ permissions:
 
 jobs:
   terraform:
-    name: Terraform ${{ inputs.action }}
+    name: Terraform
     runs-on: ubuntu-latest
 
     steps:
