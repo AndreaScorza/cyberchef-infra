@@ -7,6 +7,7 @@ locals {
 }
 
 resource "aws_iam_role" "github_actions" {
+  #checkov:skip=CKV_AWS_393:False positive; the sub claim is pinned to immutable GitHub IDs (org@id/repo@id), which checkov's regex doesn't yet recognize as safe even though it's stricter than the name-only pattern the check expects.
   name = "cyberchef-github-actions"
 
   assume_role_policy = jsonencode({
