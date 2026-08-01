@@ -7,6 +7,15 @@ terraform {
       version = "~> 5.0"
     }
   }
+
+  backend "s3" {
+    bucket       = "cyberchef-tfstate"
+    key          = "terraform.tfstate"
+    region       = "eu-north-1"
+    encrypt      = true
+    use_lockfile = true
+    profile      = "cyberchef"
+  }
 }
 
 provider "aws" {
