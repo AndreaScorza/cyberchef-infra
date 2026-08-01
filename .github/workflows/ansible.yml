@@ -29,7 +29,7 @@ jobs:
       - name: Install Ansible and dependencies
         run: |
           pip install ansible boto3 botocore
-          ansible-galaxy collection install community.aws community.docker
+          ansible-galaxy collection install amazon.aws community.aws community.docker
 
       - name: Install SSM plugin
         run: |
@@ -37,4 +37,4 @@ jobs:
           sudo dpkg -i session-manager-plugin.deb
 
       - name: Run Ansible playbook
-        run: ansible-playbook -i ansible/inventory.ini ansible/playbook.yml
+        run: ansible-playbook -i ansible/inventory.aws_ec2.yml ansible/playbook.yml

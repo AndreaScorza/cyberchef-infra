@@ -11,15 +11,6 @@ on:
       aws_role_arn:
         required: true
   workflow_dispatch:
-    inputs:
-      action:
-        description: 'Terraform action to run (plan or apply)'
-        type: choice
-        options:
-          - plan
-          - apply
-        default: plan
-        required: true
 
 permissions:
   id-token: write
@@ -30,6 +21,9 @@ jobs:
   terraform:
     name: Terraform
     runs-on: ubuntu-latest
+    env:
+      # Manual (workflow_dispatch) runs have no `action` input, so default to apply.
+      ACTION: ${{ inputs.action || 'apply' }}
 
     steps:
       - name: Checkout
@@ -54,13 +48,13 @@ jobs:
         run: terraform init
 
       - name: Terraform Plan
-        if: inputs.action == 'plan'
+        if: env.ACTION == 'plan'
         id: plan
         working-directory: terraform
         run: terraform plan -no-color
 
       - name: Post Plan as PR comment
-        if: inputs.action == 'plan' && github.event_name == 'pull_request'
+        if: env.ACTION == 'plan' && github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
@@ -77,6 +71,6 @@ jobs:
             })
 
       - name: Terraform Apply
-        if: inputs.action == 'apply'
+        if: env.ACTION == 'apply'
         working-directory: terraform
         run: terraform apply -auto-approve
