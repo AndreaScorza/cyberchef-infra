@@ -65,9 +65,8 @@ resource "aws_security_group" "cyberchef" {
   }
 }
 
-# checkov:skip=CKV_AWS_126: Detailed (1-min) monitoring adds ~$2.10/mo per instance;
-# not worth it for this demo t3.micro. Default 5-min basic monitoring is sufficient.
 resource "aws_instance" "cyberchef" {
+  #checkov:skip=CKV_AWS_126:Detailed monitoring costs ~$2.10/mo/instance; not worth it for this demo t3.micro.
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = var.instance_type
   vpc_security_group_ids = [aws_security_group.cyberchef.id]
