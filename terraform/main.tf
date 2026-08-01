@@ -40,13 +40,9 @@ resource "aws_security_group" "cyberchef" {
   name        = "cyberchef"
   description = "CyberChef security group"
 
-  ingress {
-    description = "CyberChef API"
-    from_port   = 3000
-    to_port     = 3000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+  # Ingress on 3000 (from the ALB only) is a standalone
+  # aws_vpc_security_group_ingress_rule in alb.tf, not inline here - see the
+  # comment there for why.
 
   egress {
     description = "HTTP outbound (apt mirrors)"

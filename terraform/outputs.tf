@@ -13,6 +13,11 @@ output "github_actions_role_arn" {
   value       = aws_iam_role.github_actions.arn
 }
 
+output "alb_dns_name" {
+  description = "Public DNS name of the ALB fronting CyberChef - this is the way to reach the API now (port 3000 on the instance itself is no longer directly reachable)"
+  value       = aws_lb.cyberchef.dns_name
+}
+
 output "ssm_transfer_bucket" {
   description = "S3 bucket used by the aws_ssm Ansible connection plugin for file transfer"
   value       = aws_s3_bucket.ssm_transfer.id

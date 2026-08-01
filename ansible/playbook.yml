@@ -11,6 +11,7 @@
           - ca-certificates
           - curl
           - gnupg
+          - git
         state: present
         update_cache: true
 
@@ -37,11 +38,26 @@
         state: started
         enabled: true
 
-    - name: Run CyberChef container
+    - name: Clone CyberChef-server
+      ansible.builtin.git:
+        repo: https://github.com/gchq/CyberChef-server.git
+        dest: /opt/cyberchef-server
+        version: v1.1.0
+
+    - name: Build CyberChef-server image
+      community.docker.docker_image:
+        name: cyberchef-server
+        tag: v1.1.0
+        source: build
+        build:
+          path: /opt/cyberchef-server
+        force_source: true
+
+    - name: Run CyberChef-server container
       community.docker.docker_container:
         name: cyberchef
-        image: mpepping/cyberchef
+        image: cyberchef-server:v1.1.0
         state: started
         restart_policy: always
         ports:
-          - "3000:80"
+          - "3000:3000"
