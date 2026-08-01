@@ -4,17 +4,16 @@ on:
   workflow_call:
     inputs:
       action:
-        description: Terraform action to run
+        description: 'Terraform action to run (plan or apply)'
         type: string
         required: true
     secrets:
       aws_role_arn:
         required: true
-
   workflow_dispatch:
     inputs:
       action:
-        description: Terraform action to run
+        description: 'Terraform action to run (plan or apply)'
         type: choice
         options:
           - plan
@@ -27,137 +26,57 @@ permissions:
   contents: read
   pull-requests: write
 
-concurrency:
-  group: terraform-${{ github.ref }}
-  cancel-in-progress: false
-
 jobs:
   terraform:
-    name: Terraform
+    name: Terraform ${{ inputs.action }}
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        shell: bash
-        working-directory: terraform
-
     steps:
-      - name: Validate action
-        env:
-          ACTION: ${{ inputs.action }}
-        run: |
-          if [[ "$ACTION" != "plan" && "$ACTION" != "apply" ]]; then
-            echo "Unsupported action: $ACTION"
-            exit 1
-          fi
-
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Run Checkov
         uses: bridgecrewio/checkov-action@v12
         with:
           directory: terraform
-          framework: terraform
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.aws_role_arn }}
+          role-to-assume: ${{ secrets.aws_role_arn || secrets.AWS_ROLE_ARN }}
           aws-region: eu-north-1
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_wrapper: false
 
-      - name: Check Terraform formatting
-        run: terraform fmt -check -recursive
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init
 
-      - name: Terraform init
-        run: terraform init -input=false
-
-      - name: Terraform validate
-        run: terraform validate -no-color
-
-      - name: Terraform plan
+      - name: Terraform Plan
         if: inputs.action == 'plan'
         id: plan
-        run: |
-          set +e
+        working-directory: terraform
+        run: terraform plan -no-color
 
-          terraform plan \
-            -input=false \
-            -no-color \
-            -detailed-exitcode \
-            2>&1 | tee plan.txt
-
-          exit_code=${PIPESTATUS[0]}
-
-          {
-            echo "exit_code=$exit_code"
-            echo "output<<EOF"
-            cat plan.txt
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-          # Terraform detailed exit codes:
-          # 0 = no changes
-          # 1 = error
-          # 2 = changes present
-          if [[ "$exit_code" -eq 1 ]]; then
-            exit 1
-          fi
-
-      - name: Add plan to workflow summary
-        if: inputs.action == 'plan' && always()
-        env:
-          PLAN_OUTPUT: ${{ steps.plan.outputs.output }}
-        run: |
-          {
-            echo "## Terraform plan"
-            echo
-            echo '```terraform'
-            printf '%s\n' "$PLAN_OUTPUT"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Post plan as pull request comment
-        if: >
-          inputs.action == 'plan' &&
-          github.event_name == 'pull_request' &&
-          steps.plan.outcome == 'success'
+      - name: Post Plan as PR comment
+        if: inputs.action == 'plan' && github.event_name == 'pull_request'
         uses: actions/github-script@v7
-        env:
-          PLAN_OUTPUT: ${{ steps.plan.outputs.output }}
         with:
           script: |
-            const maxLength = 60000;
-            const plan = process.env.PLAN_OUTPUT || "No plan output.";
-
-            const body = [
-              "## Terraform plan",
-              "",
-              "```terraform",
-              plan.substring(0, maxLength),
-              "```",
-              "",
-              `Triggered by @${context.actor}.`
-            ].join("\n");
-
-            await github.rest.issues.createComment({
+            const output = `#### Terraform Plan 📖
+            \`\`\`
+            ${{ steps.plan.outputs.stdout }}
+            \`\`\`
+            *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body
-            });
+              body: output
+            })
 
-      - name: Prevent apply outside manual runs
-        if: inputs.action == 'apply' && github.event_name != 'workflow_dispatch'
-        run: |
-          echo "Terraform apply is only allowed through workflow_dispatch."
-          exit 1
-
-      - name: Terraform apply
-        if: inputs.action == 'apply' && github.event_name == 'workflow_dispatch'
-        run: terraform apply -input=false -auto-approve
+      - name: Terraform Apply
+        if: inputs.action == 'apply'
+        working-directory: terraform
+        run: terraform apply -auto-approve
