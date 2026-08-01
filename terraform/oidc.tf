@@ -1,7 +1,9 @@
-resource "aws_iam_openid_connect_provider" "github" {
-  url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["ab9d0263244dd0326eb67015705a667e79cfe998"]
+# The GitHub OIDC provider is a one-time, per-account bootstrap resource
+# (an AWS account can only have one provider per issuer URL). It's created
+# manually, not managed here, so this role's own Terraform runs never need
+# IAM permissions on the provider itself. The ARN format is deterministic.
+locals {
+  github_oidc_provider_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
 }
 
 resource "aws_iam_role" "github_actions" {
@@ -12,7 +14,7 @@ resource "aws_iam_role" "github_actions" {
     Statement = [{
       Effect = "Allow"
       Principal = {
-        Federated = aws_iam_openid_connect_provider.github.arn
+        Federated = local.github_oidc_provider_arn
       }
       Action = "sts:AssumeRoleWithWebIdentity"
       Condition = {
@@ -61,18 +63,53 @@ resource "aws_iam_policy" "github_actions_iam" {
         Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/cyberchef-*"
       },
       {
-        Sid    = "AttachOnlySsmPolicyToCyberchefRole"
+        Sid    = "AttachOnlySsmPolicyToCyberchefSsmRole"
         Effect = "Allow"
         Action = [
           "iam:AttachRolePolicy",
           "iam:DetachRolePolicy",
         ]
-        Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/cyberchef-*"
+        Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/cyberchef-ssm-role"
         Condition = {
           ArnEquals = {
             "iam:PolicyARN" = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
           }
         }
+      },
+      {
+        Sid    = "AttachKnownPoliciesToGithubActionsRole"
+        Effect = "Allow"
+        Action = [
+          "iam:AttachRolePolicy",
+          "iam:DetachRolePolicy",
+        ]
+        Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/cyberchef-github-actions"
+        Condition = {
+          ArnEquals = {
+            "iam:PolicyARN" = [
+              "arn:aws:iam::aws:policy/AmazonEC2FullAccess",
+              "arn:aws:iam::aws:policy/AmazonSSMFullAccess",
+              "arn:aws:iam::aws:policy/AmazonS3FullAccess",
+              "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/cyberchef-github-actions-iam",
+            ]
+          }
+        }
+      },
+      {
+        Sid    = "ManageGithubActionsOwnPolicy"
+        Effect = "Allow"
+        Action = [
+          "iam:GetPolicy",
+          "iam:GetPolicyVersion",
+          "iam:ListPolicyVersions",
+          "iam:CreatePolicy",
+          "iam:CreatePolicyVersion",
+          "iam:DeletePolicyVersion",
+          "iam:DeletePolicy",
+          "iam:TagPolicy",
+          "iam:UntagPolicy",
+        ]
+        Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/cyberchef-github-actions-iam"
       },
       {
         Sid    = "ManageCyberchefInstanceProfile"
