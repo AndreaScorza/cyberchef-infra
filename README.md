@@ -28,22 +28,23 @@ Swagger docs at `http://cyberchef-alb-542378925.eu-north-1.elb.amazonaws.com/`. 
 ## Repo layout
 
 ```
-terraform/
-  providers.tf
-  variables.tf
-  main.tf
-  alb.tf
-  oidc.tf
-  ssm-transfer-bucket.tf
-  outputs.tf
-ansible/
-  playbook.yml
-  inventory.aws_ec2.yml
-.github/workflows/
-  terraform-plan.yml
-  deploy.yml
-  terraform.yml
-  ansible.yml
+.
+├── terraform/
+│   ├── providers.tf
+│   ├── variables.tf
+│   ├── main.tf
+│   ├── alb.tf
+│   ├── oidc.tf
+│   ├── ssm-transfer-bucket.tf
+│   └── outputs.tf
+├── ansible/
+│   ├── playbook.yml
+│   └── inventory.aws_ec2.yml
+└── .github/workflows/
+    ├── terraform-plan.yml
+    ├── deploy.yml
+    ├── terraform.yml
+    └── ansible.yml
 ```
 
 ## CI/CD
