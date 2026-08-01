@@ -1,6 +1,6 @@
 resource "aws_iam_openid_connect_provider" "github" {
-  url            = "https://token.actions.githubusercontent.com"
-  client_id_list = ["sts.amazonaws.com"]
+  url             = "https://token.actions.githubusercontent.com"
+  client_id_list  = ["sts.amazonaws.com"]
   thumbprint_list = []
 }
 
@@ -37,9 +37,74 @@ resource "aws_iam_role_policy_attachment" "github_actions_ssm" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMFullAccess"
 }
 
+data "aws_caller_identity" "current" {}
+
+resource "aws_iam_policy" "github_actions_iam" {
+  name = "cyberchef-github-actions-iam"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "ManageCyberchefRole"
+        Effect = "Allow"
+        Action = [
+          "iam:CreateRole",
+          "iam:DeleteRole",
+          "iam:GetRole",
+          "iam:TagRole",
+          "iam:UntagRole",
+          "iam:ListRolePolicies",
+          "iam:ListAttachedRolePolicies",
+          "iam:ListInstanceProfilesForRole",
+        ]
+        Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/cyberchef-*"
+      },
+      {
+        Sid    = "AttachOnlySsmPolicyToCyberchefRole"
+        Effect = "Allow"
+        Action = [
+          "iam:AttachRolePolicy",
+          "iam:DetachRolePolicy",
+        ]
+        Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/cyberchef-*"
+        Condition = {
+          ArnEquals = {
+            "iam:PolicyARN" = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+          }
+        }
+      },
+      {
+        Sid    = "ManageCyberchefInstanceProfile"
+        Effect = "Allow"
+        Action = [
+          "iam:CreateInstanceProfile",
+          "iam:DeleteInstanceProfile",
+          "iam:GetInstanceProfile",
+          "iam:AddRoleToInstanceProfile",
+          "iam:RemoveRoleFromInstanceProfile",
+          "iam:TagInstanceProfile",
+        ]
+        Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:instance-profile/cyberchef-*"
+      },
+      {
+        Sid      = "PassCyberchefRoleToEC2"
+        Effect   = "Allow"
+        Action   = "iam:PassRole"
+        Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/cyberchef-*"
+        Condition = {
+          StringEquals = {
+            "iam:PassedToService" = "ec2.amazonaws.com"
+          }
+        }
+      },
+    ]
+  })
+}
+
 resource "aws_iam_role_policy_attachment" "github_actions_iam" {
   role       = aws_iam_role.github_actions.name
-  policy_arn = "arn:aws:iam::aws:policy/IAMFullAccess"
+  policy_arn = aws_iam_policy.github_actions_iam.arn
 }
 
 resource "aws_iam_role_policy_attachment" "github_actions_s3" {
