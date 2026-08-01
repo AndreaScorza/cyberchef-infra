@@ -4,14 +4,17 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
   id-token: write
+  pull-requests: write
 
 jobs:
   terraform-apply:
     name: Terraform Apply
+    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/terraform.yml
     with:
       action: apply
@@ -21,6 +24,7 @@ jobs:
   ansible:
     name: Ansible Deploy
     needs: terraform-apply
+    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/ansible.yml
     secrets:
       aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
