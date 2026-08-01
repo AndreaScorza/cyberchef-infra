@@ -20,7 +20,7 @@ resource "aws_iam_role" "github_actions" {
           "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
         }
         StringLike = {
-          "token.actions.githubusercontent.com:sub" = "repo:AndreaScorza/cyberchef-infra:*"
+          "token.actions.githubusercontent.com:sub" = "repo:AndreaScorza@47422335/cyberchef-infra@1319345018:*"
         }
       }
     }]

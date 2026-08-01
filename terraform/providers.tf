@@ -14,11 +14,9 @@ terraform {
     region       = "eu-north-1"
     encrypt      = true
     use_lockfile = true
-    profile      = "cyberchef"
   }
 }
 
 provider "aws" {
-  region  = var.region
-  profile = "cyberchef"
+  region = var.region
 }
