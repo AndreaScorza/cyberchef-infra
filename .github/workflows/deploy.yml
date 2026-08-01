@@ -1,4 +1,4 @@
-name: Deploy CyberChef
+name: Deploy All Services
 
 on:
   push:

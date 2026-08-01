@@ -1,4 +1,4 @@
-name: Ansible
+name: Deploy Ansible
 
 on:
   workflow_call:
