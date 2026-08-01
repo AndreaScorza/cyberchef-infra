@@ -51,7 +51,6 @@
         source: build
         build:
           path: /opt/cyberchef-server
-        force_source: true
 
     - name: Run CyberChef-server container
       community.docker.docker_container:

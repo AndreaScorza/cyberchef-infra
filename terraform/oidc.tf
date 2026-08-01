@@ -55,8 +55,6 @@ resource "aws_iam_policy" "github_actions_iam" {
           "iam:CreateRole",
           "iam:DeleteRole",
           "iam:GetRole",
-          "iam:TagRole",
-          "iam:UntagRole",
           "iam:ListRolePolicies",
           "iam:ListAttachedRolePolicies",
           "iam:ListInstanceProfilesForRole",
@@ -64,7 +62,7 @@ resource "aws_iam_policy" "github_actions_iam" {
         Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/cyberchef-*"
       },
       {
-        Sid    = "AttachOnlySsmPolicyToCyberchefSsmRole"
+        Sid    = "AttachKnownPoliciesToCyberchefSsmRole"
         Effect = "Allow"
         Action = [
           "iam:AttachRolePolicy",
@@ -73,19 +71,12 @@ resource "aws_iam_policy" "github_actions_iam" {
         Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/cyberchef-ssm-role"
         Condition = {
           ArnEquals = {
-            "iam:PolicyARN" = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+            "iam:PolicyARN" = [
+              "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+              "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/cyberchef-ssm-transfer-bucket",
+            ]
           }
         }
-      },
-      {
-        Sid    = "ManageInlinePolicyOnCyberchefSsmRole"
-        Effect = "Allow"
-        Action = [
-          "iam:GetRolePolicy",
-          "iam:PutRolePolicy",
-          "iam:DeleteRolePolicy",
-        ]
-        Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/cyberchef-ssm-role"
       },
       {
         Sid    = "AttachKnownPoliciesToGithubActionsRole"
@@ -107,7 +98,10 @@ resource "aws_iam_policy" "github_actions_iam" {
         }
       },
       {
-        Sid    = "ManageGithubActionsOwnPolicy"
+        # Same action set either way, so one statement covering both
+        # policy documents this role owns, rather than one near-duplicate
+        # statement per policy.
+        Sid    = "ManageOwnPolicyDocuments"
         Effect = "Allow"
         Action = [
           "iam:GetPolicy",
@@ -117,10 +111,11 @@ resource "aws_iam_policy" "github_actions_iam" {
           "iam:CreatePolicyVersion",
           "iam:DeletePolicyVersion",
           "iam:DeletePolicy",
-          "iam:TagPolicy",
-          "iam:UntagPolicy",
         ]
-        Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/cyberchef-github-actions-iam"
+        Resource = [
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/cyberchef-github-actions-iam",
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/cyberchef-ssm-transfer-bucket",
+        ]
       },
       {
         Sid    = "ManageCyberchefInstanceProfile"
@@ -131,7 +126,6 @@ resource "aws_iam_policy" "github_actions_iam" {
           "iam:GetInstanceProfile",
           "iam:AddRoleToInstanceProfile",
           "iam:RemoveRoleFromInstanceProfile",
-          "iam:TagInstanceProfile",
         ]
         Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:instance-profile/cyberchef-*"
       },

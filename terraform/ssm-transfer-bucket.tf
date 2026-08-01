@@ -52,9 +52,16 @@ resource "aws_s3_bucket_lifecycle_configuration" "ssm_transfer" {
 
 # The instance's own role needs this - the SSM agent running on the box is
 # what actually reads/writes the transfer objects, not just the CI role.
-resource "aws_iam_role_policy" "cyberchef_ssm_transfer_bucket" {
+#
+# Managed policy + attachment (not an inline aws_iam_role_policy) so that
+# granting it to cyberchef-ssm-role goes through iam:AttachRolePolicy, which
+# the CI role's own policy (oidc.tf) already restricts to a fixed allowlist
+# of policy ARNs. An inline policy would instead need iam:PutRolePolicy,
+# which has no equivalent way to restrict what content gets written - CI
+# could inline arbitrary permissions onto this role. Same protection, no
+# extra machinery.
+resource "aws_iam_policy" "cyberchef_ssm_transfer_bucket" {
   name = "cyberchef-ssm-transfer-bucket"
-  role = aws_iam_role.cyberchef.name
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -77,4 +84,9 @@ resource "aws_iam_role_policy" "cyberchef_ssm_transfer_bucket" {
       },
     ]
   })
+}
+
+resource "aws_iam_role_policy_attachment" "cyberchef_ssm_transfer_bucket" {
+  role       = aws_iam_role.cyberchef.name
+  policy_arn = aws_iam_policy.cyberchef_ssm_transfer_bucket.arn
 }
