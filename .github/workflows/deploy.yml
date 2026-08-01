@@ -7,16 +7,11 @@ on:
   pull_request:
     branches:
       - main
-  workflow_dispatch:
-    inputs:
-      run_terraform:
-        description: 'Run Terraform'
-        type: boolean
-        default: true
-      run_ansible:
-        description: 'Run Ansible'
-        type: boolean
-        default: true
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
 
 jobs:
   terraform-plan:
@@ -30,9 +25,7 @@ jobs:
 
   terraform-apply:
     name: Terraform Apply
-    if: |
-      github.event_name == 'push' ||
-      (github.event_name == 'workflow_dispatch' && inputs.run_terraform)
+    if: github.event_name == 'push'
     uses: ./.github/workflows/terraform.yml
     with:
       action: apply
@@ -42,9 +35,7 @@ jobs:
   ansible:
     name: Ansible Deploy
     needs: terraform-apply
-    if: |
-      github.event_name == 'push' ||
-      (github.event_name == 'workflow_dispatch' && inputs.run_ansible)
+    if: github.event_name == 'push'
     uses: ./.github/workflows/ansible.yml
     secrets:
       aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
