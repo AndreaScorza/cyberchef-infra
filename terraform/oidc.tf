@@ -78,6 +78,16 @@ resource "aws_iam_policy" "github_actions_iam" {
         }
       },
       {
+        Sid    = "ManageInlinePolicyOnCyberchefSsmRole"
+        Effect = "Allow"
+        Action = [
+          "iam:GetRolePolicy",
+          "iam:PutRolePolicy",
+          "iam:DeleteRolePolicy",
+        ]
+        Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/cyberchef-ssm-role"
+      },
+      {
         Sid    = "AttachKnownPoliciesToGithubActionsRole"
         Effect = "Allow"
         Action = [

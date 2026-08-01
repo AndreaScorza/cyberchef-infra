@@ -13,6 +13,11 @@ output "github_actions_role_arn" {
   value       = aws_iam_role.github_actions.arn
 }
 
+output "ssm_transfer_bucket" {
+  description = "S3 bucket used by the aws_ssm Ansible connection plugin for file transfer"
+  value       = aws_s3_bucket.ssm_transfer.id
+}
+
 output "ssm_command" {
   description = "SSM command to connect to the instance"
   value       = "aws ssm start-session --target ${aws_instance.cyberchef.id} --region ${var.region} --profile cyberchef"
