@@ -27,3 +27,8 @@ output "ssm_command" {
   description = "SSM command to connect to the instance"
   value       = "aws ssm start-session --target ${aws_instance.cyberchef.id} --region ${var.region} --profile cyberchef"
 }
+
+output "testing" {
+  description = "Testing output to verify that the module is working"
+  value       = "Hello, world!"
+}
